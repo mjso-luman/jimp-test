@@ -1,0 +1,55 @@
+.fileSelect {
+  background-color: pink;
+  margin: 10px;
+  border: 1px solid grey;
+}
+
+.inputContainer {
+  margin: 10px;
+  flex-direction: row;
+  display: flex;
+  width: 250px;
+  justify-content: space-between;
+}
+
+.button {
+  width: 100px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgb(116, 181, 224);
+  border-radius: 20px;
+  cursor: pointer;
+}
+
+.button:hover {
+  opacity: 0.8;
+}
+.afterImage {
+  position: absolute;
+  z-index: 1;
+}
+#draw {
+  position: absolute;
+  z-index: 2;
+  pointer-events: none;
+}
+#draw #boxes {
+  fill: transparent;
+  stroke: rgb(19, 245, 106);
+  stroke-width: 2;
+  fill-opacity: 0.5;
+  stroke-opacity: 0.9;
+}
+#draw #marquee {
+  fill: white;
+  stroke: red;
+  stroke-width: 1;
+  stroke-dasharray: 5, 5;
+  stroke-opacity: 0.9;
+  fill-opacity: 0.2;
+}
+#draw #marquee.hide {
+  display: none;
+}
