@@ -23,6 +23,11 @@
   cursor: pointer;
 }
 
+.button.clicked {
+  background-color: rgb(36, 62, 80);
+  color: rgb(199, 196, 196);
+}
+
 .button:hover {
   opacity: 0.8;
 }
@@ -52,4 +57,17 @@
 }
 #draw #marquee.hide {
   display: none;
+}
+
+#draw #virtualLine {
+  stroke-dasharray: 3.3;
+}
+
+.value {
+  width: 100px;
+  height: 30px;
+  background-color: rgb(238, 243, 179);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }

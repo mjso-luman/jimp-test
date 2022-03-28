@@ -1,7 +1,23 @@
-import { useState, useEffect, ChangeEvent } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import Slider from '@mui/material/Slider';
 import Jimp from 'jimp/es';
 import './ImageTest.css';
+
+let rectangles: Rectangle[] = [];
+let dots: Dot[] = [];
+
+type Rectangle = {
+  width: number;
+  height: number;
+  x: number;
+  y: number;
+};
+
+type Dot = {
+  x: number;
+  y: number;
+};
+
 const ImageTest3 = () => {
   const [imageTest, setImageTest] = useState('');
   const [afterImage, setAfterImage] = useState('');
@@ -11,6 +27,21 @@ const ImageTest3 = () => {
 
   const [rLimit, setRLimit] = useState(0);
   const [rotate, setRotate] = useState(0);
+
+  const [xValue, setXValue] = useState(0);
+  const [yValue, setYValue] = useState(0);
+
+  const [lineX, setLineX] = useState(0);
+  const lineXRef = useRef(0);
+  lineXRef.current = lineX;
+
+  const [moveLine, setMoveLine] = useState(false);
+  const moveLineRef = useRef(false);
+  moveLineRef.current = moveLine;
+
+  const [virtualLineMode, setVirtualLineMode] = useState(false);
+  const virtualLineModeRef = useRef(false);
+  virtualLineModeRef.current = virtualLineMode;
 
   const onChange = (e: any) => {
     setImageTest(URL.createObjectURL(e.target.files[0]));
@@ -25,17 +56,16 @@ const ImageTest3 = () => {
     setRotate(newRotate === 360 ? 0 : newRotate);
   };
 
-  let rectangles: any[] = [];
-  let dots: any[] = [];
-
   let startX = 0;
   let startY = 0;
+
   const marqueeRect = {
     x: 0,
     y: 0,
     width: 0,
     height: 0,
   };
+
   const hitTest = (x: number, y: number) => {
     return rectangles.find(
       (rect) =>
@@ -58,7 +88,6 @@ const ImageTest3 = () => {
           )
         );
       });
-      console.log('???? ', dots);
       dots.forEach((data) => {
         boxes.appendChild(
           drawDot(
@@ -141,6 +170,11 @@ const ImageTest3 = () => {
     const marquee = document.getElementById('marquee');
     const afterImage = document.getElementById('afterImage');
     if (e.button === 0) {
+      // NOTE : handle virtual line
+      if (virtualLineMode) {
+      }
+
+      // NOTE : handle rectangle
       let firstDragAction = true;
       const result = findRectRegion(e.layerX, e.layerY);
       if (result) {
@@ -175,7 +209,6 @@ const ImageTest3 = () => {
               rectangles.pop();
             }
             rectangles.push(newRect);
-
             Object.assign(marqueeRect, newRect);
             drawRect(document.getElementById('marquee'), marqueeRect);
             redraw();
@@ -202,27 +235,46 @@ const ImageTest3 = () => {
       const rect = hitTest(e.layerX, e.layerY);
       if (rect) {
         rectangles.splice(rectangles.indexOf(rect), 1);
+
         redraw();
       }
       return;
     }
-
-    // if (marquee && afterImage) {
-    //   window.addEventListener('pointerup', stopDrag);
-    //   afterImage.addEventListener('pointermove', moveDrag);
-    //   marquee.classList.remove('hide');
-    //   startX = e.layerX;
-    //   startY = e.layerY;
-    // }
   };
 
   const getDot = (ev: any) => {
     if (ev.button === 0) {
-      console.log('!! ', ev.layerX, ev.layerY);
-      dots.push({ x: ev.layerX, y: ev.layerY });
-      redraw();
+      if (virtualLineModeRef.current) {
+        dots.push({ x: lineXRef.current, y: ev.layerY });
+        redraw();
+      } else {
+        dots.push({ x: ev.layerX, y: ev.layerY });
+        redraw();
+      }
     }
   };
+
+  const handleMouseMove = (e: any) => {
+    setXValue(e.layerX);
+    setYValue(e.layerY);
+  };
+
+  const handleVirtualLineMove = (e: any) => {
+    setLineX(e.layerX);
+  };
+
+  useEffect(() => {
+    if (moveLine) {
+      document
+        .getElementById('afterImage')
+        ?.addEventListener('mousemove', handleVirtualLineMove);
+    }
+    return () => {
+      document
+        .getElementById('afterImage')
+        ?.removeEventListener('mousemove', handleVirtualLineMove);
+    };
+  }, [moveLine]);
 
   useEffect(() => {
     document.getElementById('marquee')?.classList.add('hide');
@@ -230,13 +282,27 @@ const ImageTest3 = () => {
       .getElementById('afterImage')
       ?.addEventListener('pointerdown', startDrag);
     document.getElementById('afterImage')?.addEventListener('dblclick', getDot);
+    document
+      .getElementById('afterImage')
+      ?.addEventListener('mousemove', handleMouseMove);
+
+    return () => {
+      document
+        .getElementById('afterImage')
+        ?.removeEventListener('pointerdown', startDrag);
+      document
+        .getElementById('afterImage')
+        ?.removeEventListener('dblclick', getDot);
+      document
+        .getElementById('afterImage')
+        ?.removeEventListener('mousemove', handleMouseMove);
+    };
   }, [afterImage]);
 
   useEffect(() => {
     if (imageTest) {
       Jimp.read(imageTest)
         .then((image) => {
-          console.log('bitmap? ', image.bitmap);
           setImageSize({
             width: image.bitmap.width,
             height: image.bitmap.height,
@@ -350,6 +416,14 @@ const ImageTest3 = () => {
                 xmlns='http://www.w3.org/2000/svg'
               >
                 <rect id='marquee' x='450' y='420' width='150' height='150' />
+                <line
+                  id='virtualLine'
+                  x1={lineX}
+                  x2={lineX + 1}
+                  y1='0'
+                  y2='500'
+                  stroke='white'
+                />
                 <g id='boxes'></g>
               </svg>
             </div>
@@ -380,6 +454,55 @@ const ImageTest3 = () => {
             onClick={resetRectangles}
           >
             clear
+          </div>
+        </div>
+        <div className='inputContainer'>
+          <div className='value'>x : {xValue}</div>
+          <div className='value'>y : {yValue}</div>
+        </div>
+        <div className='inputContainer'>
+          <div
+            className={`button ${virtualLineMode ? 'clicked' : ''}`}
+            onClick={() => {
+              setVirtualLineMode((virtualLineMode) => !virtualLineMode);
+            }}
+            style={{ width: 300 }}
+          >
+            Add a dot on line
+          </div>
+        </div>
+        <div className='inputContainer'>
+          <div
+            className={`button ${moveLine ? 'clicked' : ''}`}
+            onClick={() => {
+              setMoveLine((prev) => !prev);
+            }}
+          >
+            move line
+          </div>
+        </div>
+        <div
+          className='inputContainer'
+          style={{ textAlign: 'start', width: 'unset' }}
+        >
+          <div>
+            {dots?.map((dot, index) => (
+              <div
+                key={`dot-${index}`}
+              >{`dot${index}  x: ${dot.x}, y: ${dot.y}`}</div>
+            ))}
+          </div>
+        </div>
+        <div
+          className='inputContainer'
+          style={{ textAlign: 'start', width: 'unset' }}
+        >
+          <div>
+            {rectangles?.map((rectangle, index) => (
+              <div
+                key={`rectangle-${index}`}
+              >{`rectangle${index}  x: ${rectangle.x}, y: ${rectangle.y} width: ${rectangle.width}`}</div>
+            ))}
           </div>
         </div>
       </div>
